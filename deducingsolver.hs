@@ -143,10 +143,11 @@ rowsMatchingAux n [(f, s)] c partial =
 -- sprawdzamy czy blank, czyli miejsce na przerwe nie jest oznaczone jako True
 --- bylo 'c' w warunkach a jest 's'
 rowsMatchingAux n ((f, s):ks) c partial =
-        [replicate f s ++ (-1) : row |
-        -- [(replicate f s) ++ row |
+        -- [replicate f s ++ (-1) : row |
+        [(replicate f s) ++ row |
                 n > f+1 && all (\x -> x == 0 || x == s) front && blank /= s,
-                row <- rowsMatching (n-f-1) ks partial']
+                -- row <- rowsMatching (n-f-1) ks partial']
+                row <- rowsMatching (n-f) ks (blank:partial')]
   where (front, blank:partial') = splitAt (f-1) partial
 
 showGrid :: [[CBlock]] -> [[CBlock]] -> Grid Int -> String

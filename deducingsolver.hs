@@ -7,6 +7,7 @@ import Data.Tuple
 import Data.List.Split
 import System.IO.Unsafe
 import System.Console.ANSI
+import Data.Char
 
 type Row s = [s]
 type Grid s = [Row s]
@@ -33,7 +34,7 @@ readNonogram fileName = do
         return mRowsCols
         where   splitToTuple arr  = map toTuple (map (splitOn "-") (words arr))
                 toTuple (x:y:_)   = (toInt x, toInt y)
-                toTuple _         = (0,0)
+                -- toTuple _         = (0,0)
                 toInt x           = read x :: Int
 
 nonogramFromFile :: String -> IO ()
@@ -63,9 +64,13 @@ solve rs cs = [grid' |
                         -- guess the rest, governed by rs
                 grid' <- zipWithM (rowsMatching nc) rs grid,
                         -- check each guess against cs
-                (map contract (transpose grid')) == (map (map fst) cs)]
+                        -- (map (map fst) cs)
+                        -- grid' is [Row Int]
+                        -- cs is columns - [[(int count,int color)]]
+                (map contract (transpose grid')) == cs]
   where nc = length cs
-        contract = map length . filter (\x -> (head x) > 0) . group
+        contract = map (\x -> (length x, head x)) . filter (\x -> (head x) > 0) . group
+        -- contract = map length . filter (\x -> (head x) > 0) . group
 
 -- A nonogram with all the values we can deduce
 -- nr - number of rows
@@ -110,11 +115,13 @@ common n ks partial = case rowsMatching n ks partial of
 
 -- rowsMatching n ks partial = all possible ways of placing blocks of
 -- length ks in a row of length n that match partial.
+-- TODO zapalowana 2
 rowsMatching :: Int -> [CBlock] -> Row CSquare -> [Row Int]
 rowsMatching n [] [] = [[]]
 rowsMatching n ks [] = []
 rowsMatching n ks (0:partial) =
-        rowsMatchingAux n ks 1 partial ++
+        rowsMatchingAux n ks 22 partial ++
+        -- rowsMatchingAux n ks 2 partial ++
         rowsMatchingAux n ks (-1) partial
 rowsMatching n ks (s:partial) = 
         rowsMatchingAux n ks s partial
@@ -124,18 +131,21 @@ rowsMatchingAux n ks (-1) partial =
         [-1 : row | row <- rowsMatching (n-1) ks partial]
 -- n >= k straznik, zeby nie wyjsc poza wiersz
 -- ostatni bloczek ([k])
--- 
+--  bylo 'c' w warunkach a jest 's'
 rowsMatchingAux n [(f, s)] c partial =
-        [replicate f c ++ replicate (n-f) (-1) |
-                n >= f && all (/= -1) front && all (/= c) back]
+        -- bylo -1 zamiast 0 //19:25
+        [replicate f s ++ replicate (n-f) (0) |
+                n >= f && all (\x -> x == 0 || x == s) front && all (/= s) back]
   where (front, back) = splitAt (f-1) partial
 -- dodajemy 'k' razy True, potem False (krzyzyk) i reszte wiersza
 -- n > k + 1, czyli nie wychodzimy poza wiersz (bloczek musi sie zmiescic w wierszu + 1 wolne miejsce, bo mamy jeszcze bloczki w 'ks')
 -- sprawdzamy front, czyli miejsca na ktore chcemy wpisac True, czy nie sa oznaczone jako False
 -- sprawdzamy czy blank, czyli miejsce na przerwe nie jest oznaczone jako True
+--- bylo 'c' w warunkach a jest 's'
 rowsMatchingAux n ((f, s):ks) c partial =
-        [replicate f c ++ (-1) : row |
-                n > f+1 && all (/= (-1)) front && blank /= c,
+        [replicate f s ++ (-1) : row |
+        -- [(replicate f s) ++ row |
+                n > f+1 && all (\x -> x == 0 || x == s) front && blank /= s,
                 row <- rowsMatching (n-f-1) ks partial']
   where (front, blank:partial') = splitAt (f-1) partial
 
@@ -152,7 +162,7 @@ showGrid rs cs ss = unlines (zipWith showRow rs ss ++ showCols cs)
           | otherwise = show k
         showCol [] = "  "
         cellChar (-1) = '_'
-        cellChar c = 'X'
+        cellChar c = head (show c)
         advance [] = []
         advance (x:xs) = xs
 

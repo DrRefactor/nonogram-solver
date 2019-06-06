@@ -64,7 +64,6 @@ solve rs cs = [grid' |
                         -- guess the rest, governed by rs
                 grid' <- zipWithM (rowsMatching nc) rs grid,
                         -- check each guess against cs
-                        -- (map (map fst) cs)
                         -- grid' is [Row Int]
                         -- cs is columns - [[(int count,int color)]]
                 (map contract (transpose grid')) == cs]
@@ -80,7 +79,7 @@ solve rs cs = [grid' |
 -- zipWithM laczy dwa arraye z pomoca zdefiniowanej funkcji, tyle ze dla monadow, tak w array
 -- zipWithM (+) [1,2,Nothing] [1,2,5] = [2,4,Notthing albo 5]
 -- improve n = zipWith (+ n)
--- superfast operator >>= example(flatMap):
+-- operator >>= example(flatMap):
 -- [1,2,3,4] >>= \ x -> [1, 2]
 -- [1,2,1,2,1,2,1,2]
 deduction :: [[CBlock]] -> [[CBlock]] -> Maybe (Grid CSquare)
@@ -100,10 +99,11 @@ converge f s = do
         if s' == s then return s else converge f s'
 
 -- common n ks partial = commonality between all possible ways of
--- placing blocks of length(s chyba) ks in a row of length n that match partial.
+-- placing blocks of length(s) ks in a row of length n that match partial.
 -- n - dlugosc kolumny lub wiersza
 -- ks - bloczki
--- ? zaznaczenie miejsc, w ktorych musza byc bloczki, np wiersz o dlugosci 10 a bloczek o dlugosci 8, i srodkowe komorki
+-- zaznaczenie miejsc, w ktorych musza byc bloczki,
+--- np poczatkowo wiersz o dlugosci 10 a bloczek o dlugosci 8, i srodkowe komorki
 common :: Int -> [CBlock] -> Row CSquare -> Maybe (Row CSquare)
 common n ks partial = case rowsMatching n ks partial of
         [] -> Nothing
@@ -115,13 +115,11 @@ common n ks partial = case rowsMatching n ks partial of
 
 -- rowsMatching n ks partial = all possible ways of placing blocks of
 -- length ks in a row of length n that match partial.
--- TODO zapalowana 2
 rowsMatching :: Int -> [CBlock] -> Row CSquare -> [Row Int]
 rowsMatching n [] [] = [[]]
 rowsMatching n ks [] = []
 rowsMatching n ks (0:partial) =
-        rowsMatchingAux n ks 22 partial ++
-        -- rowsMatchingAux n ks 2 partial ++
+        rowsMatchingAux n ks 0 partial ++
         rowsMatchingAux n ks (-1) partial
 rowsMatching n ks (s:partial) = 
         rowsMatchingAux n ks s partial
@@ -132,21 +130,20 @@ rowsMatchingAux n ks (-1) partial =
 -- n >= k straznik, zeby nie wyjsc poza wiersz
 -- ostatni bloczek ([k])
 --  bylo 'c' w warunkach a jest 's'
+-- all (/= s)
 rowsMatchingAux n [(f, s)] c partial =
-        -- bylo -1 zamiast 0 //19:25
         [replicate f s ++ replicate (n-f) (0) |
-                n >= f && all (\x -> x == 0 || x == s) front && all (/= s) back]
+                n >= f && all (\x -> x == 0 || x == s) front && all (\x -> x == 0 || x == (-1)) back]
   where (front, back) = splitAt (f-1) partial
--- dodajemy 'k' razy True, potem False (krzyzyk) i reszte wiersza
+-- dodajemy 'k' razy s, potem reszte wiersza
 -- n > k + 1, czyli nie wychodzimy poza wiersz (bloczek musi sie zmiescic w wierszu + 1 wolne miejsce, bo mamy jeszcze bloczki w 'ks')
--- sprawdzamy front, czyli miejsca na ktore chcemy wpisac True, czy nie sa oznaczone jako False
--- sprawdzamy czy blank, czyli miejsce na przerwe nie jest oznaczone jako True
+-- sprawdzamy front, czyli miejsca na ktore chcemy wpisac s, czy nie sa oznaczone jako False
+-- sprawdzamy czy blank, czyli miejsce na przerwe nie jest oznaczone jako s
 --- bylo 'c' w warunkach a jest 's'
 rowsMatchingAux n ((f, s):ks) c partial =
         -- [replicate f s ++ (-1) : row |
         [(replicate f s) ++ row |
                 n > f+1 && all (\x -> x == 0 || x == s) front && blank /= s,
-                -- row <- rowsMatching (n-f-1) ks partial']
                 row <- rowsMatching (n-f) ks (blank:partial')]
   where (front, blank:partial') = splitAt (f-1) partial
 
@@ -163,6 +160,7 @@ showGrid rs cs ss = unlines (zipWith showRow rs ss ++ showCols cs)
           | otherwise = show k
         showCol [] = "  "
         cellChar (-1) = '_'
+        cellChar 0 = '_'
         cellChar c = head (show c)
         advance [] = []
         advance (x:xs) = xs

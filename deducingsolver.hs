@@ -22,7 +22,7 @@ type CBlock = (Int, Int)
 
 -- show color solution
 palette :: [Color]
-palette = [Black, Red, Green, Yellow, Blue, Magenta, Cyan, White]
+palette = [Magenta, Red, Green, Yellow, Blue, Black, Cyan, White]
 
 readNonogram :: String -> IO [[[CBlock]]]
 readNonogram fileName = do

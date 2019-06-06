@@ -39,13 +39,25 @@ readNonogram fileName = do
 
 nonogramFromFile :: String -> IO ()
 nonogramFromFile fileName = case unsafePerformIO (readNonogram fileName) of
-        (rs:cs:_)   -> putStr (nonogram rs cs)
-        _           -> putStr ("Invalid file")
+        (rs:cs:_)   -> visualize (nonogram rs cs)
+        -- _           -> putStr ("Invalid file")
+
+visualize:: [[(Char, Color)]] -> IO ()
+visualize [] = putChar '\n'
+visualize (el:arr) = do
+        visualizeRow el
+        visualize arr
+
+visualizeRow:: [(Char, Color)] -> IO ()
+visualizeRow [] = putChar '\n'
+visualizeRow ((char, col):arr) = do
+        putCharWithColor char col
+        visualizeRow arr
 
 -- Print the first solution (if any) to the nonogram
-nonogram :: [[CBlock]] -> [[CBlock]] -> String
+nonogram :: [[CBlock]] -> [[CBlock]] -> [[(Char, Color)]]
 nonogram rs cs = case solve rs cs of
-        [] -> "Inconsistent\n"
+        -- [] -> putStr ("Inconsistent\n")
         (grid:_) -> showGrid rs cs grid
 
 -- All solutions to the nonogram
@@ -147,21 +159,21 @@ rowsMatchingAux n ((f, s):ks) c partial =
                 row <- rowsMatching (n-f) ks (blank:partial')]
   where (front, blank:partial') = splitAt (f-1) partial
 
-showGrid :: [[CBlock]] -> [[CBlock]] -> Grid Int -> String
-showGrid rs cs ss = unlines (zipWith showRow rs ss ++ showCols cs)
-  where showRow rs ss = concat [['|', cellChar s] | s <- ss] ++ "| " ++
-                unwords (map show rs)
-        showCols :: [[CBlock]] -> [[Char]]
+showGrid :: [[CBlock]] -> [[CBlock]] -> Grid Int -> [[(Char, Color)]]
+showGrid rs cs ss = (zipWith showRow rs ss ++ showCols cs)
+  where showRow rs ss = concat [[('|', White), cellChar s] | s <- ss] ++ [('|', White)] ++
+                (map (\(x, y) -> (head (show x), palette!!y)) rs)
+        showCols :: [[CBlock]] -> [[(Char, Color)]]
         showCols cs
           | all null cs = []
           | otherwise = concatMap showCol cs : showCols (map advance cs)
         showCol ((k, l):_)
-          | k < 10 = ' ':show k
-          | otherwise = show k
-        showCol [] = "  "
-        cellChar (-1) = '_'
-        cellChar 0 = '_'
-        cellChar c = head (show c)
+          | k < 10 = (' ', White):[(head (show k), palette!!l)]
+          | otherwise = [(head (show k), palette!!l)]
+        showCol [] = [(' ', White)]
+        cellChar (-1) = ('_', White)
+        cellChar 0 = ('_', White)
+        cellChar c = (head (show c), palette!!c)
         advance [] = []
         advance (x:xs) = xs
 
